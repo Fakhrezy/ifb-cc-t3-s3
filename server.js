@@ -1,7 +1,7 @@
 require('dotenv').config();
 const express = require('express');
 const mysql2 = require('mysql2/promise');
-const AWS = require('aws-sdk');
+const { S3Client, DeleteObjectCommand } = require('@aws-sdk/client-s3');
 const multer = require('multer');
 const multerS3 = require('multer-s3');
 const cors = require('cors');
@@ -11,14 +11,16 @@ app.use(cors());
 app.use(express.json());
 app.use(express.static('public'));
 
-// AWS S3 Config
-const s3 = new AWS.S3({
-  accessKeyId: process.env.AWS_ACCESS_KEY_ID,
-  secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
+// AWS S3 Config (SDK v3)
+const s3 = new S3Client({
+  credentials: {
+    accessKeyId: process.env.AWS_ACCESS_KEY_ID,
+    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
+  },
   region: process.env.AWS_REGION
 });
 
-// MySQL Connection Pool — TANPA database dulu
+// MySQL Connection Pool
 const pool = mysql2.createPool({
   host: process.env.DB_HOST,
   user: process.env.DB_USER,
@@ -46,12 +48,11 @@ async function initDB() {
   console.log('Database & table ready!');
 }
 
-// Multer S3 Upload
+// Multer S3 Upload (SDK v3)
 const upload = multer({
   storage: multerS3({
     s3,
     bucket: process.env.S3_BUCKET,
-    acl: 'public-read',
     metadata: (req, file, cb) => cb(null, { fieldName: file.fieldname }),
     key: (req, file, cb) => {
       const uniqueName = Date.now() + '-' + file.originalname;
@@ -112,8 +113,11 @@ app.delete('/files/:id', async (req, res) => {
     const fileUrl = rows[0].file_url;
     const key = fileUrl.split('.com/')[1];
 
-    // Hapus dari S3
-    await s3.deleteObject({ Bucket: process.env.S3_BUCKET, Key: key }).promise();
+    // Hapus dari S3 (SDK v3)
+    await s3.send(new DeleteObjectCommand({
+      Bucket: process.env.S3_BUCKET,
+      Key: key
+    }));
 
     // Hapus dari DB
     await conn.query('DELETE FROM files WHERE id = ?', [req.params.id]);
