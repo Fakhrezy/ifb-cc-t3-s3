@@ -18,12 +18,11 @@ const s3 = new AWS.S3({
   region: process.env.AWS_REGION
 });
 
-// MySQL Connection Pool
+// MySQL Connection Pool — TANPA database dulu
 const pool = mysql2.createPool({
   host: process.env.DB_HOST,
   user: process.env.DB_USER,
   password: process.env.DB_PASSWORD,
-  database: process.env.DB_NAME,
   waitForConnections: true,
   connectionLimit: 10
 });
@@ -52,6 +51,7 @@ const upload = multer({
   storage: multerS3({
     s3,
     bucket: process.env.S3_BUCKET,
+    acl: 'public-read',
     metadata: (req, file, cb) => cb(null, { fieldName: file.fieldname }),
     key: (req, file, cb) => {
       const uniqueName = Date.now() + '-' + file.originalname;
@@ -68,14 +68,17 @@ app.post('/upload', upload.single('file'), async (req, res) => {
     const { originalname, size, mimetype, location } = req.file;
     const fileSizeKB = (size / 1024).toFixed(2) + ' KB';
 
-    await pool.query(
+    const conn = await pool.getConnection();
+    await conn.query(`USE \`${process.env.DB_NAME}\``);
+    await conn.query(
       'INSERT INTO files (file_name, file_url, file_size, file_type) VALUES (?, ?, ?, ?)',
       [originalname, location, fileSizeKB, mimetype]
     );
+    conn.release();
 
     res.json({ success: true, message: 'File berhasil diupload!', url: location });
   } catch (err) {
-    console.error(err);
+    console.error('Upload error:', err);
     res.status(500).json({ success: false, message: 'Upload gagal', error: err.message });
   }
 });
@@ -83,9 +86,13 @@ app.post('/upload', upload.single('file'), async (req, res) => {
 // List semua file
 app.get('/files', async (req, res) => {
   try {
-    const [rows] = await pool.query('SELECT * FROM files ORDER BY upload_date DESC');
+    const conn = await pool.getConnection();
+    await conn.query(`USE \`${process.env.DB_NAME}\``);
+    const [rows] = await conn.query('SELECT * FROM files ORDER BY upload_date DESC');
+    conn.release();
     res.json(rows);
   } catch (err) {
+    console.error('List error:', err);
     res.status(500).json({ error: err.message });
   }
 });
@@ -93,8 +100,14 @@ app.get('/files', async (req, res) => {
 // Delete file
 app.delete('/files/:id', async (req, res) => {
   try {
-    const [rows] = await pool.query('SELECT * FROM files WHERE id = ?', [req.params.id]);
-    if (rows.length === 0) return res.status(404).json({ message: 'File tidak ditemukan' });
+    const conn = await pool.getConnection();
+    await conn.query(`USE \`${process.env.DB_NAME}\``);
+    const [rows] = await conn.query('SELECT * FROM files WHERE id = ?', [req.params.id]);
+
+    if (rows.length === 0) {
+      conn.release();
+      return res.status(404).json({ message: 'File tidak ditemukan' });
+    }
 
     const fileUrl = rows[0].file_url;
     const key = fileUrl.split('.com/')[1];
@@ -103,10 +116,12 @@ app.delete('/files/:id', async (req, res) => {
     await s3.deleteObject({ Bucket: process.env.S3_BUCKET, Key: key }).promise();
 
     // Hapus dari DB
-    await pool.query('DELETE FROM files WHERE id = ?', [req.params.id]);
+    await conn.query('DELETE FROM files WHERE id = ?', [req.params.id]);
+    conn.release();
 
     res.json({ success: true, message: 'File berhasil dihapus' });
   } catch (err) {
+    console.error('Delete error:', err);
     res.status(500).json({ error: err.message });
   }
 });
@@ -116,4 +131,7 @@ initDB().then(() => {
   app.listen(process.env.PORT, () => {
     console.log(`Server berjalan di port ${process.env.PORT}`);
   });
+}).catch(err => {
+  console.error('Gagal inisialisasi database:', err.message);
+  process.exit(1);
 });
