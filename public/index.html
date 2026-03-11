@@ -51,6 +51,7 @@
 			.upload-card:hover {
 				border-color: #a0c4ff;
 			}
+
 			.upload-card h2 {
 				color: #a0c4ff;
 				margin-bottom: 16px;
@@ -69,6 +70,7 @@
 				transition: opacity 0.2s;
 				display: block;
 				margin: 0 auto 16px;
+				word-break: break-all;
 			}
 
 			.file-input-label:hover {
@@ -95,9 +97,11 @@
 				font-size: 0.95rem;
 				min-height: 20px;
 			}
+
 			.status-ok {
 				color: #4caf50;
 			}
+
 			.status-err {
 				color: #f44336;
 			}
@@ -118,6 +122,58 @@
 				transition: width 0.3s;
 			}
 
+			/* Preview */
+			#filePreview {
+				display: none;
+				margin: 16px auto 20px;
+				max-width: 420px;
+			}
+
+			#previewImg {
+				display: none;
+				max-width: 100%;
+				max-height: 200px;
+				border-radius: 10px;
+				margin-bottom: 10px;
+				border: 1px solid #0f3460;
+				object-fit: contain;
+			}
+
+			#previewInfo {
+				background: #0f0f1a;
+				border: 1px solid #0f3460;
+				border-radius: 10px;
+				padding: 12px 16px;
+				text-align: left;
+				font-size: 0.85rem;
+				color: #aaa;
+			}
+
+			#previewInfo .preview-row {
+				display: flex;
+				align-items: center;
+				gap: 12px;
+			}
+
+			#previewIcon {
+				font-size: 2.2rem;
+				flex-shrink: 0;
+			}
+
+			#previewName {
+				color: #e0e0e0;
+				font-weight: 600;
+				word-break: break-all;
+				margin-bottom: 4px;
+			}
+
+			#previewSize,
+			#previewType {
+				color: #777;
+				font-size: 0.8rem;
+			}
+
+			/* File list */
 			.file-list-header {
 				display: flex;
 				justify-content: space-between;
@@ -166,6 +222,7 @@
 			tbody tr:hover {
 				background: #16213e;
 			}
+
 			tbody tr:last-child {
 				border-bottom: none;
 			}
@@ -183,6 +240,7 @@
 				margin-right: 8px;
 				vertical-align: middle;
 			}
+
 			.file-name {
 				color: #e0e0e0;
 				font-weight: 500;
@@ -203,10 +261,12 @@
 				background: #1a5276;
 				color: white;
 			}
+
 			.btn-delete {
 				background: #7b1818;
 				color: white;
 			}
+
 			.btn-download:hover,
 			.btn-delete:hover {
 				opacity: 0.8;
@@ -257,6 +317,7 @@
 		</header>
 
 		<div class="container">
+			<!-- Upload Section -->
 			<div class="upload-card">
 				<h2>
 					<svg
@@ -273,19 +334,39 @@
 					</svg>
 					Upload File
 				</h2>
+
 				<span
 					class="file-input-label"
-					onclick="document.getElementById('fileInput').click()"
-					>Pilih file...</span
-				>
-				<input type="file" id="fileInput" />
-				<button class="btn-upload" onclick="uploadFile()">Upload ke S3</button>
+					id="fileLabel"
+					onclick="document.getElementById('fileInput').click()">
+					Pilih file...
+				</span>
+				<input type="file" id="fileInput" onchange="previewFile(this)" />
+
+				<!-- Preview Area -->
+				<div id="filePreview">
+					<img id="previewImg" alt="preview" />
+					<div id="previewInfo">
+						<div class="preview-row">
+							<span id="previewIcon"></span>
+							<div>
+								<div id="previewName"></div>
+								<div id="previewSize"></div>
+								<div id="previewType"></div>
+							</div>
+						</div>
+					</div>
+				</div>
+
+				<button class="btn-upload" onclick="uploadFile()">Upload</button>
+
 				<div class="progress-wrap" id="progressWrap">
 					<div class="progress-bar" id="progressBar"></div>
 				</div>
 				<div id="upload-status"></div>
 			</div>
 
+			<!-- File List Section -->
 			<div class="file-list-header">
 				<h2>
 					<svg
@@ -327,11 +408,104 @@
 		</footer>
 
 		<script>
-			function getFileIcon(type) {
+			// ===== PREVIEW FILE =====
+			function previewFile(input) {
+				const file = input.files[0];
+				const label = document.getElementById("fileLabel");
+				const preview = document.getElementById("filePreview");
+				const previewImg = document.getElementById("previewImg");
+				const previewIcon = document.getElementById("previewIcon");
+				const previewName = document.getElementById("previewName");
+				const previewSize = document.getElementById("previewSize");
+				const previewType = document.getElementById("previewType");
+
+				if (!file) {
+					label.textContent = "Pilih file...";
+					preview.style.display = "none";
+					return;
+				}
+
+				// Update label jadi nama file
+				label.textContent = file.name;
+
+				// Format ukuran
+				const sizeKB = (file.size / 1024).toFixed(2);
+				const sizeMB = (file.size / (1024 * 1024)).toFixed(2);
+				const sizeStr =
+					file.size > 1024 * 1024 ? `${sizeMB} MB` : `${sizeKB} KB`;
+
+				// Isi info
+				previewName.textContent = file.name;
+				previewSize.textContent = `Ukuran: ${sizeStr}`;
+				previewType.textContent = `Tipe: ${file.type || "unknown"}`;
+
+				// Set icon berdasarkan tipe
+				const type = file.type;
 				const svgBase =
-					'<svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" style="display: inline-block; margin-right: 4px;">';
+					'<svg width="24" height="24" viewBox="0 0 24 24" fill="#a0c4ff" style="display:inline-block;">';
 				const svgEnd = "</svg>";
 
+				if (type.includes("image"))
+					previewIcon.innerHTML =
+						svgBase +
+						'<path d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z"/>' +
+						svgEnd;
+				else if (type.includes("pdf"))
+					previewIcon.innerHTML =
+						svgBase +
+						'<path d="M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6zm-2 16h-2v-2h2v2zm0-4h-2V8h2v6zm4 4h-2v-2h2v2zm0-4h-2V8h2v6z"/>' +
+						svgEnd;
+				else if (type.includes("video"))
+					previewIcon.innerHTML =
+						svgBase +
+						'<path d="M18 3H6c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-5 9l-5-3.5v7L13 12z"/>' +
+						svgEnd;
+				else if (type.includes("audio"))
+					previewIcon.innerHTML =
+						svgBase +
+						'<path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z"/>' +
+						svgEnd;
+				else if (type.includes("zip") || type.includes("rar"))
+					previewIcon.innerHTML =
+						svgBase +
+						'<path d="M20 6h-8l-2-2H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2zm-1 9h-5v3h-2v-3H7v-2h5V8h2v5h5v2z"/>' +
+						svgEnd;
+				else if (type.includes("word") || type.includes("document"))
+					previewIcon.innerHTML =
+						svgBase +
+						'<path d="M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm0-5h-6V9h6v4z"/>' +
+						svgEnd;
+				else if (type.includes("sheet") || type.includes("excel"))
+					previewIcon.innerHTML =
+						svgBase +
+						'<path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zM9 17H7v-7h2V17zm4 0h-2V9h2V17zm4 0h-2v-4h2V17z"/>' +
+						svgEnd;
+				else
+					previewIcon.innerHTML =
+						svgBase +
+						'<path d="M14 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V8l-6-6z"/>' +
+						svgEnd;
+
+				// Tampilkan thumbnail jika gambar
+				if (type.startsWith("image/")) {
+					const reader = new FileReader();
+					reader.onload = (e) => {
+						previewImg.src = e.target.result;
+						previewImg.style.display = "block";
+					};
+					reader.readAsDataURL(file);
+				} else {
+					previewImg.style.display = "none";
+				}
+
+				preview.style.display = "block";
+			}
+
+			// ===== GET FILE ICON =====
+			function getFileIcon(type) {
+				const svgBase =
+					'<svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" style="display:inline-block; margin-right:4px;">';
+				const svgEnd = "</svg>";
 				if (!type)
 					return (
 						svgBase +
@@ -359,7 +533,7 @@
 				if (type.includes("audio"))
 					return (
 						svgBase +
-						'<path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 16c-3.31 0-6-2.69-6-6 0-1.53.59-2.93 1.55-3.97q-.4.7-.75 1.48 1.29-2.38 3.8-3.97 2.51 1.59 3.8 3.97q-.35-.78-.75-1.48C17.41 9.07 18 10.47 18 12c0 3.31-2.69 6-6 6zm0-10c-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4-1.79-4-4-4z"/>' +
+						'<path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z"/>' +
 						svgEnd
 					);
 				if (type.includes("zip") || type.includes("rar"))
@@ -387,6 +561,7 @@
 				);
 			}
 
+			// ===== FORMAT DATE =====
 			function formatDate(dateStr) {
 				const d = new Date(dateStr);
 				return (
@@ -400,6 +575,7 @@
 				);
 			}
 
+			// ===== LOAD FILES =====
 			async function loadFiles() {
 				try {
 					const res = await fetch("/files");
@@ -410,63 +586,64 @@
 
 					if (files.length === 0) {
 						container.innerHTML = `
-			       <div class="empty-state">
-			         <svg width="48" height="48" viewBox="0 0 24 24" fill="#555" style="display: block; margin: 0 auto 12px;">
-			           <path d="M20 6h-8l-2-2H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2zm0 12H4V6h5.17l2 2H20v10z"/>
-			         </svg>
-			         Belum ada file. Upload file pertama Anda!
-			       </div>`;
+							<div class="empty-state">
+								<svg width="48" height="48" viewBox="0 0 24 24" fill="#555" style="display:block; margin:0 auto 12px;">
+									<path d="M20 6h-8l-2-2H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2zm0 12H4V6h5.17l2 2H20v10z"/>
+								</svg>
+								Belum ada file. Upload file pertama Anda!
+							</div>`;
 						return;
 					}
 
 					container.innerHTML = `
-			     <table>
-			       <thead>
-			         <tr>
-			           <th>Nama File</th>
-			           <th>Ukuran</th>
-			           <th>Tipe</th>
-			           <th>Tanggal Upload</th>
-			           <th>Aksi</th>
-			         </tr>
-			       </thead>
-			       <tbody>
-			         ${files
+						<table>
+							<thead>
+								<tr>
+									<th>Nama File</th>
+									<th>Ukuran</th>
+									<th>Tipe</th>
+									<th>Tanggal Upload</th>
+									<th>Aksi</th>
+								</tr>
+							</thead>
+							<tbody>
+								${files
 									.map(
 										(f) => `
-			           <tr>
-			             <td>
-			               <span class="file-icon">${getFileIcon(f.file_type)}</span>
-			               <span class="file-name">${f.file_name}</span>
-			             </td>
-			             <td>${f.file_size || "-"}</td>
-			             <td>${f.file_type ? f.file_type.split("/")[1] : "-"}</td>
-			             <td>${formatDate(f.upload_date)}</td>
-			             <td>
-			               <button class="btn-download" onclick="window.open('${f.file_url}', '_blank')">
-			                 <svg width="16" height="16" viewBox="0 0 24 24" fill="white" style="display: inline-block; margin-right: 4px; vertical-align: middle;">
-			                   <path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/>
-			                 </svg>
-			                 Download
-			               </button>
-			               <button class="btn-delete" onclick="deleteFile(${f.id}, '${f.file_name}')">
-			                 <svg width="16" height="16" viewBox="0 0 24 24" fill="white" style="display: inline-block; margin-right: 4px; vertical-align: middle;">
-			                   <path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-9l-1 1H5v2h14V4z"/>
-			                 </svg>
-			                 Hapus
-			               </button>
-			             </td>
-			           </tr>
-			         `
+									<tr>
+										<td>
+											<span class="file-icon">${getFileIcon(f.file_type)}</span>
+											<span class="file-name">${f.file_name}</span>
+										</td>
+										<td>${f.file_size || "-"}</td>
+										<td>${f.file_type ? f.file_type.split("/")[1] : "-"}</td>
+										<td>${formatDate(f.upload_date)}</td>
+										<td>
+											<button class="btn-download" onclick="window.open('${f.file_url}', '_blank')">
+												<svg width="16" height="16" viewBox="0 0 24 24" fill="white" style="display:inline-block; margin-right:4px; vertical-align:middle;">
+													<path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/>
+												</svg>
+												Download
+											</button>
+											<button class="btn-delete" onclick="deleteFile(${f.id}, '${f.file_name}')">
+												<svg width="16" height="16" viewBox="0 0 24 24" fill="white" style="display:inline-block; margin-right:4px; vertical-align:middle;">
+													<path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-9l-1 1H5v2h14V4z"/>
+												</svg>
+												Hapus
+											</button>
+										</td>
+									</tr>
+								`
 									)
 									.join("")}
-			       </tbody>
-			     </table>`;
+							</tbody>
+						</table>`;
 				} catch (err) {
 					console.error(err);
 				}
 			}
 
+			// ===== UPLOAD FILE =====
 			async function uploadFile() {
 				const fileInput = document.getElementById("fileInput");
 				const status = document.getElementById("upload-status");
@@ -475,7 +652,7 @@
 
 				if (!fileInput.files[0]) {
 					status.innerHTML =
-						'<span class="status-err"><svg width="16" height="16" viewBox="0 0 24 24" fill="#f44336" style="display: inline-block; margin-right: 4px; vertical-align: middle;"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/></svg>Pilih file terlebih dahulu!</span>';
+						'<span class="status-err"><svg width="16" height="16" viewBox="0 0 24 24" fill="#f44336" style="display:inline-block; margin-right:4px; vertical-align:middle;"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/></svg>Pilih file terlebih dahulu!</span>';
 					return;
 				}
 
@@ -483,7 +660,7 @@
 				formData.append("file", fileInput.files[0]);
 
 				status.innerHTML =
-					'<span style="color:#a0c4ff"><svg width="16" height="16" viewBox="0 0 24 24" fill="#a0c4ff" style="display: inline-block; margin-right: 4px; vertical-align: middle; animation: spin 1s linear infinite;"><circle cx="12" cy="12" r="10" fill="none" stroke="currentColor" stroke-width="2" stroke-dasharray="15.7 47.1"/></svg>Mengupload...</span>';
+					'<span style="color:#a0c4ff"><svg width="16" height="16" viewBox="0 0 24 24" fill="#a0c4ff" style="display:inline-block; margin-right:4px; vertical-align:middle; animation:spin 1s linear infinite;"><circle cx="12" cy="12" r="10" fill="none" stroke="currentColor" stroke-width="2" stroke-dasharray="15.7 47.1"/></svg>Mengupload...</span>';
 				progressWrap.style.display = "block";
 				progressBar.style.width = "30%";
 
@@ -498,8 +675,9 @@
 
 					if (data.success) {
 						status.innerHTML =
-							'<span class="status-ok"><svg width="16" height="16" viewBox="0 0 24 24" fill="#4caf50" style="display: inline-block; margin-right: 4px; vertical-align: middle;"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>File berhasil diupload ke S3!</span>';
+							'<span class="status-ok"><svg width="16" height="16" viewBox="0 0 24 24" fill="#4caf50" style="display:inline-block; margin-right:4px; vertical-align:middle;"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>File berhasil diupload!</span>';
 						fileInput.value = "";
+						previewFile(fileInput); // reset preview
 						setTimeout(() => {
 							progressWrap.style.display = "none";
 							progressBar.style.width = "0%";
@@ -507,14 +685,15 @@
 						}, 2000);
 						loadFiles();
 					} else {
-						status.innerHTML = `<span class="status-err"><svg width="16" height="16" viewBox="0 0 24 24" fill="#f44336" style="display: inline-block; margin-right: 4px; vertical-align: middle;"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12 19 6.41z"/></svg>${data.message}</span>`;
+						status.innerHTML = `<span class="status-err"><svg width="16" height="16" viewBox="0 0 24 24" fill="#f44336" style="display:inline-block; margin-right:4px; vertical-align:middle;"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12 19 6.41z"/></svg>${data.message}</span>`;
 					}
 				} catch (err) {
 					status.innerHTML =
-						'<span class="status-err"><svg width="16" height="16" viewBox="0 0 24 24" fill="#f44336" style="display: inline-block; margin-right: 4px; vertical-align: middle;"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12 19 6.41z"/></svg>Gagal terhubung ke server</span>';
+						'<span class="status-err"><svg width="16" height="16" viewBox="0 0 24 24" fill="#f44336" style="display:inline-block; margin-right:4px; vertical-align:middle;"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12 19 6.41z"/></svg>Gagal terhubung ke server</span>';
 				}
 			}
 
+			// ===== DELETE FILE =====
 			async function deleteFile(id, name) {
 				if (!confirm(`Hapus file "${name}"?`)) return;
 				try {
@@ -526,6 +705,7 @@
 				}
 			}
 
+			// Load saat halaman dibuka
 			loadFiles();
 		</script>
 	</body>
