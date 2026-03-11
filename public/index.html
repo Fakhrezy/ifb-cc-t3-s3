@@ -1,0 +1,532 @@
+<!doctype html>
+<html lang="id">
+	<head>
+		<meta charset="UTF-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+		<title>T3S3 CC</title>
+		<style>
+			* {
+				margin: 0;
+				padding: 0;
+				box-sizing: border-box;
+			}
+
+			body {
+				font-family: "Segoe UI", Arial, sans-serif;
+				background: #0f0f1a;
+				color: #e0e0e0;
+				min-height: 100vh;
+			}
+
+			header {
+				background: linear-gradient(135deg, #1a1a2e, #16213e);
+				padding: 20px 40px;
+				border-bottom: 2px solid #0f3460;
+				display: flex;
+				align-items: center;
+				gap: 14px;
+			}
+
+			header h1 {
+				font-size: 1.6rem;
+				color: #a0c4ff;
+			}
+
+			.container {
+				max-width: 900px;
+				margin: 40px auto;
+				padding: 0 20px;
+			}
+
+			.upload-card {
+				background: #1a1a2e;
+				border: 2px dashed #0f3460;
+				border-radius: 16px;
+				padding: 40px;
+				text-align: center;
+				margin-bottom: 32px;
+				transition: border-color 0.3s;
+			}
+
+			.upload-card:hover {
+				border-color: #a0c4ff;
+			}
+			.upload-card h2 {
+				color: #a0c4ff;
+				margin-bottom: 16px;
+				font-size: 1.2rem;
+			}
+
+			.upload-card input[type="file"] {
+				display: none;
+			}
+
+			.file-input-label {
+				color: #a0c4ff;
+				text-decoration: underline;
+				cursor: pointer;
+				font-size: 1rem;
+				transition: opacity 0.2s;
+				display: block;
+				margin: 0 auto 16px;
+			}
+
+			.file-input-label:hover {
+				opacity: 0.8;
+			}
+
+			.btn-upload {
+				background: linear-gradient(135deg, #0f3460, #1a5276);
+				color: white;
+				border: none;
+				padding: 12px 32px;
+				border-radius: 8px;
+				font-size: 1rem;
+				cursor: pointer;
+				transition: opacity 0.2s;
+			}
+
+			.btn-upload:hover {
+				opacity: 0.85;
+			}
+
+			#upload-status {
+				margin-top: 12px;
+				font-size: 0.95rem;
+				min-height: 20px;
+			}
+			.status-ok {
+				color: #4caf50;
+			}
+			.status-err {
+				color: #f44336;
+			}
+
+			.progress-wrap {
+				background: #0f0f1a;
+				border-radius: 8px;
+				height: 8px;
+				margin-top: 12px;
+				display: none;
+			}
+
+			.progress-bar {
+				height: 100%;
+				width: 0%;
+				background: #a0c4ff;
+				border-radius: 8px;
+				transition: width 0.3s;
+			}
+
+			.file-list-header {
+				display: flex;
+				justify-content: space-between;
+				align-items: center;
+				margin-bottom: 16px;
+			}
+
+			.file-list-header h2 {
+				color: #a0c4ff;
+				font-size: 1.2rem;
+			}
+
+			.file-count {
+				background: #0f3460;
+				color: #a0c4ff;
+				padding: 4px 12px;
+				border-radius: 20px;
+				font-size: 0.85rem;
+			}
+
+			table {
+				width: 100%;
+				border-collapse: collapse;
+				background: #1a1a2e;
+				border-radius: 12px;
+				overflow: hidden;
+			}
+
+			thead {
+				background: #0f3460;
+			}
+
+			thead th {
+				padding: 14px 16px;
+				text-align: left;
+				color: #a0c4ff;
+				font-size: 0.9rem;
+				font-weight: 600;
+			}
+
+			tbody tr {
+				border-bottom: 1px solid #0f3460;
+				transition: background 0.2s;
+			}
+
+			tbody tr:hover {
+				background: #16213e;
+			}
+			tbody tr:last-child {
+				border-bottom: none;
+			}
+
+			tbody td {
+				padding: 14px 16px;
+				font-size: 0.9rem;
+				color: #ccc;
+			}
+
+			.file-icon {
+				display: inline-block;
+				width: 24px;
+				height: 24px;
+				margin-right: 8px;
+				vertical-align: middle;
+			}
+			.file-name {
+				color: #e0e0e0;
+				font-weight: 500;
+			}
+
+			.btn-download,
+			.btn-delete {
+				padding: 6px 14px;
+				border: none;
+				border-radius: 6px;
+				cursor: pointer;
+				font-size: 0.82rem;
+				margin-right: 6px;
+				transition: opacity 0.2s;
+			}
+
+			.btn-download {
+				background: #1a5276;
+				color: white;
+			}
+			.btn-delete {
+				background: #7b1818;
+				color: white;
+			}
+			.btn-download:hover,
+			.btn-delete:hover {
+				opacity: 0.8;
+			}
+
+			.empty-state {
+				text-align: center;
+				padding: 60px 20px;
+				color: #555;
+			}
+
+			.empty-state span {
+				font-size: 3rem;
+				display: block;
+				margin-bottom: 12px;
+			}
+
+			@keyframes spin {
+				0% {
+					transform: rotate(0deg);
+				}
+				100% {
+					transform: rotate(360deg);
+				}
+			}
+
+			footer {
+				text-align: center;
+				padding: 30px;
+				color: #444;
+				font-size: 0.85rem;
+				margin-top: 40px;
+			}
+		</style>
+	</head>
+	<body>
+		<header>
+			<svg
+				width="32"
+				height="32"
+				viewBox="0 0 24 24"
+				fill="#a0c4ff"
+				style="margin-right: 12px">
+				<path
+					d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8z" />
+			</svg>
+			<h1>Tugas 3 S3 Komputasi Awan</h1>
+		</header>
+
+		<div class="container">
+			<div class="upload-card">
+				<h2>
+					<svg
+						width="24"
+						height="24"
+						viewBox="0 0 24 24"
+						fill="#a0c4ff"
+						style="
+							display: inline-block;
+							margin-right: 8px;
+							vertical-align: middle;
+						">
+						<path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z" />
+					</svg>
+					Upload File
+				</h2>
+				<span
+					class="file-input-label"
+					onclick="document.getElementById('fileInput').click()"
+					>Pilih file...</span
+				>
+				<input type="file" id="fileInput" />
+				<button class="btn-upload" onclick="uploadFile()">Upload ke S3</button>
+				<div class="progress-wrap" id="progressWrap">
+					<div class="progress-bar" id="progressBar"></div>
+				</div>
+				<div id="upload-status"></div>
+			</div>
+
+			<div class="file-list-header">
+				<h2>
+					<svg
+						width="24"
+						height="24"
+						viewBox="0 0 24 24"
+						fill="#a0c4ff"
+						style="
+							display: inline-block;
+							margin-right: 8px;
+							vertical-align: middle;
+						">
+						<path
+							d="M20 6h-8l-2-2H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2zm0 12H4V6h5.17l2 2H20v10z" />
+					</svg>
+					Daftar File
+				</h2>
+				<span class="file-count" id="fileCount">0 file</span>
+			</div>
+
+			<div id="fileListContainer">
+				<div class="empty-state">
+					<svg
+						width="48"
+						height="48"
+						viewBox="0 0 24 24"
+						fill="#555"
+						style="display: block; margin: 0 auto 12px">
+						<path
+							d="M20 6h-8l-2-2H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2zm0 12H4V6h5.17l2 2H20v10z" />
+					</svg>
+					Memuat file...
+				</div>
+			</div>
+		</div>
+
+		<footer>
+			Deden Fahrul &mdash; 152022182 &mdash; Mini Cloud Storage (S3 + RDS)
+		</footer>
+
+		<script>
+			function getFileIcon(type) {
+				const svgBase =
+					'<svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" style="display: inline-block; margin-right: 4px;">';
+				const svgEnd = "</svg>";
+
+				if (!type)
+					return (
+						svgBase +
+						'<path d="M14 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V8l-6-6z"/>' +
+						svgEnd
+					);
+				if (type.includes("image"))
+					return (
+						svgBase +
+						'<path d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z"/>' +
+						svgEnd
+					);
+				if (type.includes("pdf"))
+					return (
+						svgBase +
+						'<path d="M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6zm-2 16h-2v-2h2v2zm0-4h-2V8h2v6zm4 4h-2v-2h2v2zm0-4h-2V8h2v6z"/>' +
+						svgEnd
+					);
+				if (type.includes("video"))
+					return (
+						svgBase +
+						'<path d="M18 3H6c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-5 9l-5-3.5v7L13 12z"/>' +
+						svgEnd
+					);
+				if (type.includes("audio"))
+					return (
+						svgBase +
+						'<path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 16c-3.31 0-6-2.69-6-6 0-1.53.59-2.93 1.55-3.97q-.4.7-.75 1.48 1.29-2.38 3.8-3.97 2.51 1.59 3.8 3.97q-.35-.78-.75-1.48C17.41 9.07 18 10.47 18 12c0 3.31-2.69 6-6 6zm0-10c-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4-1.79-4-4-4z"/>' +
+						svgEnd
+					);
+				if (type.includes("zip") || type.includes("rar"))
+					return (
+						svgBase +
+						'<path d="M20 6h-8l-2-2H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2zm-1 9h-5v3h-2v-3H7v-2h5V8h2v5h5v2z"/>' +
+						svgEnd
+					);
+				if (type.includes("word") || type.includes("document"))
+					return (
+						svgBase +
+						'<path d="M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm0-5h-6V9h6v4z"/>' +
+						svgEnd
+					);
+				if (type.includes("sheet") || type.includes("excel"))
+					return (
+						svgBase +
+						'<path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zM9 17H7v-7h2V17zm4 0h-2V9h2V17zm4 0h-2v-4h2V17z"/>' +
+						svgEnd
+					);
+				return (
+					svgBase +
+					'<path d="M14 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V8l-6-6z"/>' +
+					svgEnd
+				);
+			}
+
+			function formatDate(dateStr) {
+				const d = new Date(dateStr);
+				return (
+					d.toLocaleDateString("id-ID", {
+						day: "2-digit",
+						month: "short",
+						year: "numeric"
+					}) +
+					" " +
+					d.toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" })
+				);
+			}
+
+			async function loadFiles() {
+				try {
+					const res = await fetch("/files");
+					const files = await res.json();
+					document.getElementById("fileCount").textContent =
+						`${files.length} file`;
+					const container = document.getElementById("fileListContainer");
+
+					if (files.length === 0) {
+						container.innerHTML = `
+			       <div class="empty-state">
+			         <svg width="48" height="48" viewBox="0 0 24 24" fill="#555" style="display: block; margin: 0 auto 12px;">
+			           <path d="M20 6h-8l-2-2H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2zm0 12H4V6h5.17l2 2H20v10z"/>
+			         </svg>
+			         Belum ada file. Upload file pertama Anda!
+			       </div>`;
+						return;
+					}
+
+					container.innerHTML = `
+			     <table>
+			       <thead>
+			         <tr>
+			           <th>Nama File</th>
+			           <th>Ukuran</th>
+			           <th>Tipe</th>
+			           <th>Tanggal Upload</th>
+			           <th>Aksi</th>
+			         </tr>
+			       </thead>
+			       <tbody>
+			         ${files
+									.map(
+										(f) => `
+			           <tr>
+			             <td>
+			               <span class="file-icon">${getFileIcon(f.file_type)}</span>
+			               <span class="file-name">${f.file_name}</span>
+			             </td>
+			             <td>${f.file_size || "-"}</td>
+			             <td>${f.file_type ? f.file_type.split("/")[1] : "-"}</td>
+			             <td>${formatDate(f.upload_date)}</td>
+			             <td>
+			               <button class="btn-download" onclick="window.open('${f.file_url}', '_blank')">
+			                 <svg width="16" height="16" viewBox="0 0 24 24" fill="white" style="display: inline-block; margin-right: 4px; vertical-align: middle;">
+			                   <path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/>
+			                 </svg>
+			                 Download
+			               </button>
+			               <button class="btn-delete" onclick="deleteFile(${f.id}, '${f.file_name}')">
+			                 <svg width="16" height="16" viewBox="0 0 24 24" fill="white" style="display: inline-block; margin-right: 4px; vertical-align: middle;">
+			                   <path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-9l-1 1H5v2h14V4z"/>
+			                 </svg>
+			                 Hapus
+			               </button>
+			             </td>
+			           </tr>
+			         `
+									)
+									.join("")}
+			       </tbody>
+			     </table>`;
+				} catch (err) {
+					console.error(err);
+				}
+			}
+
+			async function uploadFile() {
+				const fileInput = document.getElementById("fileInput");
+				const status = document.getElementById("upload-status");
+				const progressWrap = document.getElementById("progressWrap");
+				const progressBar = document.getElementById("progressBar");
+
+				if (!fileInput.files[0]) {
+					status.innerHTML =
+						'<span class="status-err"><svg width="16" height="16" viewBox="0 0 24 24" fill="#f44336" style="display: inline-block; margin-right: 4px; vertical-align: middle;"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/></svg>Pilih file terlebih dahulu!</span>';
+					return;
+				}
+
+				const formData = new FormData();
+				formData.append("file", fileInput.files[0]);
+
+				status.innerHTML =
+					'<span style="color:#a0c4ff"><svg width="16" height="16" viewBox="0 0 24 24" fill="#a0c4ff" style="display: inline-block; margin-right: 4px; vertical-align: middle; animation: spin 1s linear infinite;"><circle cx="12" cy="12" r="10" fill="none" stroke="currentColor" stroke-width="2" stroke-dasharray="15.7 47.1"/></svg>Mengupload...</span>';
+				progressWrap.style.display = "block";
+				progressBar.style.width = "30%";
+
+				try {
+					progressBar.style.width = "70%";
+					const res = await fetch("/upload", {
+						method: "POST",
+						body: formData
+					});
+					const data = await res.json();
+					progressBar.style.width = "100%";
+
+					if (data.success) {
+						status.innerHTML =
+							'<span class="status-ok"><svg width="16" height="16" viewBox="0 0 24 24" fill="#4caf50" style="display: inline-block; margin-right: 4px; vertical-align: middle;"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>File berhasil diupload ke S3!</span>';
+						fileInput.value = "";
+						setTimeout(() => {
+							progressWrap.style.display = "none";
+							progressBar.style.width = "0%";
+							status.innerHTML = "";
+						}, 2000);
+						loadFiles();
+					} else {
+						status.innerHTML = `<span class="status-err"><svg width="16" height="16" viewBox="0 0 24 24" fill="#f44336" style="display: inline-block; margin-right: 4px; vertical-align: middle;"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12 19 6.41z"/></svg>${data.message}</span>`;
+					}
+				} catch (err) {
+					status.innerHTML =
+						'<span class="status-err"><svg width="16" height="16" viewBox="0 0 24 24" fill="#f44336" style="display: inline-block; margin-right: 4px; vertical-align: middle;"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12 19 6.41z"/></svg>Gagal terhubung ke server</span>';
+				}
+			}
+
+			async function deleteFile(id, name) {
+				if (!confirm(`Hapus file "${name}"?`)) return;
+				try {
+					const res = await fetch(`/files/${id}`, { method: "DELETE" });
+					const data = await res.json();
+					if (data.success) loadFiles();
+				} catch (err) {
+					alert("Gagal menghapus file");
+				}
+			}
+
+			loadFiles();
+		</script>
+	</body>
+</html>
